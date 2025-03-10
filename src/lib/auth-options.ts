@@ -3,8 +3,10 @@ import Credentials from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { User } from "@/models/User";
 import connectDB from "./db";
+import { AuthOptions } from 'next-auth';
+import GithubProvider from 'next-auth/providers/github';
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   // Configure one or more authentication providers
   providers: [
     GoogleProvider({
@@ -54,6 +56,10 @@ export const authOptions = {
         }
       },
     }),
+    GithubProvider({
+      clientId: process.env.GITHUB_ID as string,
+      clientSecret: process.env.GITHUB_SECRET as string,
+    }),
     // ...add more providers here
   ],
   pages: {
@@ -87,14 +93,14 @@ export const authOptions = {
       }
     },
     async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).accessToken = token.accessToken;
+      }
       return session;
     },
-    async jwt({ token, user, account }) {
-      if (account && user) {
-        return {
-          ...token,
-          accessToken: account.access_token,
-        };
+    async jwt({ token, account, profile }) {
+      if (account) {
+        token.accessToken = account.access_token;
       }
       return token;
     },
@@ -103,4 +109,4 @@ export const authOptions = {
   session: {
     strategy: 'jwt',
   },
-} as NextAuthOptions;
+} as AuthOptions;

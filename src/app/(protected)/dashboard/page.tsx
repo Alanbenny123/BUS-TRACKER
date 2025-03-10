@@ -8,25 +8,25 @@ const Map = dynamic(() => import('@/components/ui/Map'), { ssr: false });
 const busRoutes = [
   {
     id: '1',
-    number: ' BusCollege 101',
+    number: 'College Bus 101',
     time: '8:00 AM',
     status: 'On Time',
-    route: 'North Campus → South Campus'
+    route: 'North Campus → Adi Shankara Collage'
   },
   {
     id: '2',
     number: 'College Bus 102',
     time: '8:15 AM',
     status: 'Delayed',
-    route: 'CP → Delhi University'
-  },
+    route: 'CP → Adi Shankara Collage'
+  }/*,
   {
     id: '3',
     number: 'College Bus 103',
     time: '8:30 AM',
     status: 'On Time',
     route: 'AIIMS → IIT Delhi'
-  }
+  }*/
 ];
 
 export default function DashboardPage() {
