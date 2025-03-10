@@ -13,8 +13,7 @@ import {
 
 const navigation = [
   { name: 'College Bus Overview', href: '/dashboard', icon: TruckIcon },
-  { name: 'Tracking Map', href: '/dashboard/map', icon: MapIcon },
-  { name: 'Drivers', href: '/dashboard/drivers', icon: UserGroupIcon },
+   { name: 'Drivers', href: '/dashboard/drivers', icon: UserGroupIcon },
   
 ];
 
