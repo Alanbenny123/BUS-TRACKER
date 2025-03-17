@@ -15,12 +15,16 @@ export default function RegisterForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
+    setIsSubmitting,
   } = useForm<RegisterFormData>({
     resolver: valibotResolver(registerSchema),
   });
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
+      setIsSubmitting(true);
+      setError(null);
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -32,20 +36,22 @@ export default function RegisterForm() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError("root", { message: result.error || 'Registration failed' });
+        setError(result.error || 'Registration failed');
         return;
       }
 
       router.push('/login?registered=true');
-    } catch (error) {
-      setError("root", { message: 'An error occurred during registration' });
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {errors.root && (
-        <div className="text-red-500 text-sm text-center">{errors.root.message}</div>
+      {errors && (
+        <div className="text-red-500 text-sm text-center">{errors}</div>
       )}
       
       <div>
