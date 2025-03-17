@@ -5,16 +5,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   TruckIcon, 
-  MapIcon, 
   UserGroupIcon, 
-  ChartBarIcon,
   ArrowLeftOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'College Bus Overview', href: '/dashboard', icon: TruckIcon },
-   { name: 'Drivers', href: '/dashboard/drivers', icon: UserGroupIcon },
-  
+  { name: 'Drivers', href: '/dashboard/drivers', icon: UserGroupIcon },
 ];
 
 export default function DashboardSidebar() {
@@ -67,4 +64,4 @@ export default function DashboardSidebar() {
       </div>
     </div>
   );
-} 
+}

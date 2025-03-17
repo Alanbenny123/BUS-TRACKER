@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import DriverAvatar from '@/components/ui/DriverAvatar';
 import io from 'socket.io-client';
-import { useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 
@@ -64,25 +63,10 @@ export default function DriversPage() {
     },
   });
 
-  // Show loading state while session is loading
-  if (status === 'loading') {
-    return (
-      <div className="py-6">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [driverLocations, setDriverLocations] = useState<Record<string, { latitude: number; longitude: number }>>({});
   const [socket, setSocket] = useState<ReturnType<typeof io> | null>(null);
 
-  // Query for drivers data with caching
   const { data: drivers = [], isLoading, error } = useQuery<Driver[], Error>({
     queryKey: ['drivers'],
     queryFn: fetchDrivers,
@@ -90,7 +74,6 @@ export default function DriversPage() {
     gcTime: 3600000, // Cache for 1 hour
   });
 
-  // Socket connection with optimized updates
   useEffect(() => {
     if (!session) return;
 
@@ -133,6 +116,30 @@ export default function DriversPage() {
       newSocket.disconnect();
     };
   }, [session]);
+
+  useEffect(() => {
+    if (status === 'loading') {
+      return;
+    }
+
+    if (status === 'unauthenticated') {
+      signIn('github', { callbackUrl: '/dashboard/drivers' });
+    }
+  }, [status]);
+
+  // Show loading state while session is loading
+  if (status === 'loading') {
+    return (
+      <div className="py-6">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Loading states
   if (isLoading) {
@@ -314,4 +321,4 @@ export default function DriversPage() {
       </div>
     </div>
   );
-} 
+}

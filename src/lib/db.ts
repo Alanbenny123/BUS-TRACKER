@@ -1,7 +1,12 @@
 import mongoose from 'mongoose';
 
 declare global {
-  var mongoose: { conn: null | mongoose.Mongoose; promise: null | Promise<mongoose.Mongoose> } | undefined;
+  interface GlobalWithMongoose extends NodeJS.Global {
+    mongoose?: {
+      conn: mongoose.Mongoose | null;
+      promise: Promise<mongoose.Mongoose> | null;
+    };
+  }
 }
 
 if (!process.env.MONGODB_URI) {
@@ -9,11 +14,10 @@ if (!process.env.MONGODB_URI) {
 }
 
 const MONGODB_URI = process.env.MONGODB_URI;
+const cached = (global as GlobalWithMongoose).mongoose || { conn: null, promise: null };
 
-let cached = global.mongoose || { conn: null, promise: null };
-
-if (!global.mongoose) {
-  global.mongoose = cached;
+if (!(global as GlobalWithMongoose).mongoose) {
+  (global as GlobalWithMongoose).mongoose = cached;
 }
 
 async function connectDB() {

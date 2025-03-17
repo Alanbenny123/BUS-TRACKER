@@ -25,7 +25,7 @@ const busRoutes = [
     number: 'College Bus 103',
     time: '8:30 AM',
     status: 'On Time',
-    route: 'AIIMS → IIT Delhi'
+    route: 'AIIMS → Adi Shankara Collage'
   }*/
 ];
 

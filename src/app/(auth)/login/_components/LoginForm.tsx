@@ -5,7 +5,7 @@ import { valibotResolver } from '@hookform/resolvers/valibot';
 import { object, string, pipe, email, minLength } from 'valibot';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PasswordInput from '@/components/ui/PasswordInput';
 
@@ -29,10 +29,16 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(
-    searchParams.get('registered') === 'true' || searchParams.get('reset') === 'true'
-  );
+  const [showSuccessMessage, setShowSuccessMessage] = useState<string | null>(null);
   
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setShowSuccessMessage('Registration successful! Please sign in with your credentials.');
+    } else if (searchParams.get('reset') === 'true') {
+      setShowSuccessMessage('Password reset successful! Please sign in with your new password.');
+    }
+  }, [searchParams]);
+
   const {
     register,
     handleSubmit,
@@ -56,22 +62,16 @@ export default function LoginForm() {
 
       router.push('/dashboard');
       router.refresh();
-    } catch (error) {
+    } catch {
       setError('An error occurred during login');
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {showSuccess && searchParams.get('registered') === 'true' && (
+      {showSuccessMessage && (
         <div className="text-green-500 text-sm text-center">
-          Registration successful! Please sign in with your credentials.
-        </div>
-      )}
-
-      {showSuccess && searchParams.get('reset') === 'true' && (
-        <div className="text-green-500 text-sm text-center">
-          Password reset successful! Please sign in with your new password.
+          {showSuccessMessage}
         </div>
       )}
       
@@ -159,4 +159,4 @@ export default function LoginForm() {
       </div>
     </form>
   );
-} 
+}
