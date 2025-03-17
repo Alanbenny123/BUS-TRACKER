@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { valibotResolver } from '@hookform/resolvers/valibot';
-import { object, string, pipe, minLength, custom } from 'valibot';
+import { object, string, pipe, minLength } from 'valibot';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import PasswordInput from '@/components/ui/PasswordInput';
@@ -28,11 +28,12 @@ export default function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     watch,
   } = useForm<ResetPasswordFormData>({
     resolver: valibotResolver(resetPasswordSchema),
@@ -51,6 +52,9 @@ export default function ResetPasswordForm() {
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {
+      setIsSubmitting(true);
+      setError(null);
+      
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -70,8 +74,10 @@ export default function ResetPasswordForm() {
       }
 
       router.push('/login?reset=true');
-    } catch (error) {
+    } catch (err) {
       setError('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -118,4 +124,4 @@ export default function ResetPasswordForm() {
       </div>
     </form>
   );
-} 
+}

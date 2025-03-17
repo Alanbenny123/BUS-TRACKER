@@ -156,7 +156,11 @@ export default function Map() {
 
   useEffect(() => {
     setIsMounted(true);
-    requestLocation();
+    if (navigator.geolocation) {
+      requestLocation();
+    } else {
+      setLocationError('Geolocation is not supported by your browser');
+    }
 
     // Connect to Socket.IO server
     const socket = io('http://localhost:3000', {
@@ -196,7 +200,7 @@ export default function Map() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [requestLocation]);
 
   if (!isMounted) return null;
 

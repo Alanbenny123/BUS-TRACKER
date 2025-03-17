@@ -1,46 +1,24 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { withAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
 
 export default withAuth(
   function middleware(req) {
-    const isAuth = !!req.nextauth.token;
-    const isAuthPage = req.nextUrl.pathname.startsWith('/login') || 
-                      req.nextUrl.pathname.startsWith('/register') ||
-                      req.nextUrl.pathname.startsWith('/forgot-password') ||
-                      req.nextUrl.pathname.startsWith('/reset-password');
-
-    if (isAuthPage && isAuth) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+    const token = req.nextauth.token;
+    
+    // Check if user is trying to access admin routes
+    if (req.nextUrl.pathname.startsWith('/admin') && token?.role !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
-    return null;
+    return NextResponse.next();
   },
   {
     callbacks: {
-      authorized({ req, token }) {
-        const isAuthPage = req.nextUrl.pathname.startsWith('/login') || 
-                         req.nextUrl.pathname.startsWith('/register') ||
-                         req.nextUrl.pathname.startsWith('/forgot-password') ||
-                         req.nextUrl.pathname.startsWith('/reset-password');
-                         
-        const isProtectedRoute = req.nextUrl.pathname.startsWith('/dashboard');
-        
-        if (isProtectedRoute) {
-          return !!token;
-        }
-        
-        return true;
-      },
+      authorized: ({ token }) => !!token,
     },
   }
 );
 
 export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password'
-  ]
-}; 
+  matcher: ['/dashboard/:path*', '/admin/:path*'],
+};

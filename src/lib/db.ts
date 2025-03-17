@@ -1,47 +1,43 @@
 import mongoose from 'mongoose';
 
-declare global {
-  interface GlobalWithMongoose extends NodeJS.Global {
-    mongoose?: {
-      conn: mongoose.Mongoose | null;
-      promise: Promise<mongoose.Mongoose> | null;
-    };
-  }
-}
-
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env');
-}
-
 const MONGODB_URI = process.env.MONGODB_URI;
-const cached = (global as GlobalWithMongoose).mongoose || { conn: null, promise: null };
 
-if (!(global as GlobalWithMongoose).mongoose) {
-  (global as GlobalWithMongoose).mongoose = cached;
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
-async function connectDB() {
+interface GlobalWithMongoose {
+  mongoose: {
+    conn: typeof mongoose | null;
+    promise: Promise<typeof mongoose> | null;
+  };
+}
+
+declare const global: GlobalWithMongoose;
+
+const cached = global.mongoose || { conn: null, promise: null };
+
+async function dbConnect() {
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,
+      bufferCommands: true,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => mongoose);
+    cached.promise = mongoose.connect(MONGODB_URI!, opts);
   }
 
   try {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    cached.conn = null;
     throw e;
   }
 
   return cached.conn;
 }
 
-export default connectDB;
+export default dbConnect;

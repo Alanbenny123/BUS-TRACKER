@@ -1,95 +1,78 @@
-import type { AuthOptions } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
-import { User } from "@/models/User";
-import connectDB from "./db";
+import { AuthOptions } from 'next-auth';
 import GithubProvider from 'next-auth/providers/github';
+import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { MongoDBAdapter } from '@auth/mongodb-adapter';
+import clientPromise from '@/lib/mongodb';
+import { compare } from 'bcryptjs';
+import { User } from '@/models/User';
+import dbConnect from './db';
 
 export const authOptions: AuthOptions = {
+  adapter: MongoDBAdapter(clientPromise),
   providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    Credentials({
+    CredentialsProvider({
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "jsmith@gmail.com" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error('Invalid credentials');
         }
 
-        try {
-          await connectDB();
-          const user = await User.findOne({ email: credentials.email });
+        await dbConnect();
 
-          if (!user) {
-            return null;
-          }
+        const user = await User.findOne({ email: credentials.email });
 
-          const isPasswordMatch = await user.comparePassword(credentials.password);
-
-          if (!isPasswordMatch) {
-            return null;
-          }
-
-          return {
-            id: user._id.toString(),
-            email: user.email,
-          };
-        } catch {
-          return null;
+        if (!user || !user?.password) {
+          throw new Error('Invalid credentials');
         }
+
+        const isCorrectPassword = await compare(credentials.password, user.password);
+
+        if (!isCorrectPassword) {
+          throw new Error('Invalid credentials');
+        }
+
+        return {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
-    GithubProvider({
-      clientId: process.env.GITHUB_ID as string,
-      clientSecret: process.env.GITHUB_SECRET as string,
-    }),
   ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session?.user) {
+        session.user.role = token.role;
+      }
+      return session;
+    },
+  },
   pages: {
     signIn: '/login',
     error: '/login',
   },
-  callbacks: {
-    async signIn({ user, account }) {
-      try {
-        if (account?.provider === 'google') {
-          await connectDB();
-          
-          let dbUser = await User.findOne({ email: user.email });
-          
-          if (!dbUser) {
-            dbUser = await User.create({
-              email: user.email,
-              name: user.name,
-              image: user.image,
-            });
-          }
-        }
-        return true;
-      } catch (err) {
-        console.error('Error in signIn callback:', err);
-        return false;
-      }
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.accessToken = token.accessToken;
-      }
-      return session;
-    },
-    async jwt({ token, account }) {
-      if (account) {
-        token.accessToken = account.access_token;
-      }
-      return token;
-    },
-  },
-  debug: true,
   session: {
     strategy: 'jwt',
   },
+  secret: process.env.NEXTAUTH_SECRET,
 };

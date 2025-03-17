@@ -1,30 +1,40 @@
+'use client';
+
 import Image from 'next/image';
 import RegisterForm from './_components/RegisterForm';
 
-export default function Register() {
+export default function RegisterPage() {
   return (
-    <>
-      <div className="flex min-h-full flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <Image
-            alt="Your Company"
-            src="https://tailwindui.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-            width={40}
-            height={40}
-            className="mx-auto w-auto"
-            priority
-          />
-          <h2 className="mt-6 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-white">
-            Create your account
-          </h2>
-        </div>
-
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-          <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
-            <RegisterForm />
+    <div className="flex min-h-screen">
+      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+        <div className="mx-auto w-full max-w-sm lg:w-96">
+          <div className="flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={48}
+              height={48}
+              className="h-12 w-auto"
+              priority
+            />
+          </div>
+          <div className="mt-8">
+            <div className="mt-6">
+              <RegisterForm />
+            </div>
           </div>
         </div>
       </div>
-    </>
+      <div className="relative hidden w-0 flex-1 lg:block">
+        <Image
+          className="absolute inset-0 h-full w-full object-cover"
+          src="/auth-bg.jpg"
+          alt="Background"
+          width={1920}
+          height={1080}
+          priority
+        />
+      </div>
+    </div>
   );
 }

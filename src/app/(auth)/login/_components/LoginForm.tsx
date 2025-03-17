@@ -29,13 +29,12 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const [showSuccessMessage, setShowSuccessMessage] = useState<string | null>(null);
   
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
-      setShowSuccessMessage('Registration successful! Please sign in with your credentials.');
+      setError(null);
     } else if (searchParams.get('reset') === 'true') {
-      setShowSuccessMessage('Password reset successful! Please sign in with your new password.');
+      setError(null);
     }
   }, [searchParams]);
 
@@ -49,6 +48,7 @@ export default function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      setIsSubmitting(true);
       const result = await signIn('credentials', {
         redirect: false,
         email: data.email,
@@ -56,25 +56,20 @@ export default function LoginForm() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(result.error);
         return;
       }
 
       router.push('/dashboard');
-      router.refresh();
-    } catch {
-      setError('An error occurred during login');
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {showSuccessMessage && (
-        <div className="text-green-500 text-sm text-center">
-          {showSuccessMessage}
-        </div>
-      )}
-      
       {error && (
         <div className="text-red-500 text-sm text-center">{error}</div>
       )}

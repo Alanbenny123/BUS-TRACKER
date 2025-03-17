@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import DriverAvatar from '@/components/ui/DriverAvatar';
 import io from 'socket.io-client';
 import { useSession, signIn } from 'next-auth/react';
-import { redirect } from 'next/navigation';
 
 // Types
 interface Driver {
@@ -63,11 +62,13 @@ export default function DriversPage() {
     },
   });
 
+  // Declare all state hooks at the top level
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [driverLocations, setDriverLocations] = useState<Record<string, { latitude: number; longitude: number }>>({});
   const [socket, setSocket] = useState<ReturnType<typeof io> | null>(null);
 
-  const { data: drivers = [], isLoading, error } = useQuery<Driver[], Error>({
+  // Query for drivers data with caching
+  const { data: drivers = [], isLoading } = useQuery<Driver[], Error>({
     queryKey: ['drivers'],
     queryFn: fetchDrivers,
     staleTime: 60000, // Consider data fresh for 1 minute
@@ -75,7 +76,7 @@ export default function DriversPage() {
   });
 
   useEffect(() => {
-    if (!session) return;
+    if (status === 'loading') return;
 
     const newSocket = io('http://localhost:3000', {
       transports: ['websocket'],
@@ -84,14 +85,13 @@ export default function DriversPage() {
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
       auth: {
-        token: session.user?.email
+        token: session?.user?.email
       }
     });
 
     let locationUpdates: Record<string, { latitude: number; longitude: number }> = {};
     let updateTimeout: NodeJS.Timeout;
 
-    // Batch location updates
     const processLocationUpdates = () => {
       if (Object.keys(locationUpdates).length > 0) {
         setDriverLocations(prev => ({ ...prev, ...locationUpdates }));
@@ -115,34 +115,9 @@ export default function DriversPage() {
       clearTimeout(updateTimeout);
       newSocket.disconnect();
     };
-  }, [session]);
+  }, [session, status]);
 
-  useEffect(() => {
-    if (status === 'loading') {
-      return;
-    }
-
-    if (status === 'unauthenticated') {
-      signIn('github', { callbackUrl: '/dashboard/drivers' });
-    }
-  }, [status]);
-
-  // Show loading state while session is loading
-  if (status === 'loading') {
-    return (
-      <div className="py-6">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading states
-  if (isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="py-6">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -153,28 +128,6 @@ export default function DriversPage() {
               <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
               <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="py-6">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-red-50 dark:bg-red-900 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-red-800 dark:text-red-200">Error Loading Drivers</h3>
-            <p className="mt-2 text-sm text-red-700 dark:text-red-300">
-              {error instanceof Error ? error.message : 'An error occurred while loading the drivers.'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-3 text-sm font-medium text-red-800 dark:text-red-200 hover:text-red-600 dark:hover:text-red-400"
-            >
-              Try again
-            </button>
           </div>
         </div>
       </div>
@@ -207,30 +160,20 @@ export default function DriversPage() {
                     <button
                       key={driver.id}
                       onClick={() => setSelectedDriver(driver)}
-                      className={`w-full text-left p-4 rounded-lg transition-colors ${
+                      className={`w-full flex items-center space-x-4 p-4 rounded-lg transition ${
                         selectedDriver?.id === driver.id
-                          ? 'bg-indigo-50 dark:bg-indigo-900'
-                          : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                          ? 'bg-indigo-50 dark:bg-gray-700'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
-                      <div className="flex items-center space-x-4">
-                        <div className="relative">
-                          <DriverAvatar name={driver.name} size={48} />
-                          <span 
-                            className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white ${
-                              isOnline ? 'bg-green-400' : 'bg-gray-400'
-                            }`} 
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{driver.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-300">{driver.busNumber}</p>
-                          {location && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                              Last update: {new Date().toLocaleTimeString()}
-                            </p>
-                          )}
-                        </div>
+                      <DriverAvatar name={driver.name} isOnline={isOnline} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {driver.name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {driver.busNumber}
+                        </p>
                       </div>
                     </button>
                   );
@@ -241,81 +184,74 @@ export default function DriversPage() {
 
           {/* Driver Details */}
           <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-            {selectedDriver ? (
-              <div className="p-6">
-                <div className="flex flex-col items-center">
-                  <div className="relative">
-                    <DriverAvatar name={selectedDriver.name} size={192} className="mb-6" />
-                    <span 
-                      className={`absolute bottom-6 right-0 block h-6 w-6 rounded-full ring-4 ring-white ${
-                        driverLocations[selectedDriver.id] ? 'bg-green-400' : 'bg-gray-400'
-                      }`} 
+            <div className="p-6">
+              {selectedDriver ? (
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-4">
+                    <DriverAvatar 
+                      name={selectedDriver.name} 
+                      isOnline={!!driverLocations[selectedDriver.id]}
+                      size="lg"
                     />
+                    <div>
+                      <h2 className="text-xl font-medium text-gray-900 dark:text-white">
+                        {selectedDriver.name}
+                      </h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {selectedDriver.busNumber}
+                      </p>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                    {selectedDriver.name}
-                  </h2>
-                  <p className="text-lg text-indigo-600 dark:text-indigo-400 mb-6">
-                    {selectedDriver.busNumber}
-                  </p>
 
-                  <div className="w-full space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Age</p>
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">
-                          {selectedDriver.age} years
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Experience</p>
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">
-                          {selectedDriver.experience}
-                        </p>
-                      </div>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Contact Information
+                      </h3>
+                      <dl className="mt-2 space-y-1">
+                        <div>
+                          <dt className="text-sm text-gray-500 dark:text-gray-400">Phone</dt>
+                          <dd className="text-sm font-medium text-gray-900 dark:text-white">
+                            {selectedDriver.phoneNumber}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500 dark:text-gray-400">Address</dt>
+                          <dd className="text-sm font-medium text-gray-900 dark:text-white">
+                            {selectedDriver.address}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Phone Number</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {selectedDriver.phoneNumber}
-                      </p>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Bus Information
+                      </h3>
+                      <dl className="mt-2 space-y-1">
+                        <div>
+                          <dt className="text-sm text-gray-500 dark:text-gray-400">Number Plate</dt>
+                          <dd className="text-sm font-medium text-gray-900 dark:text-white">
+                            {selectedDriver.numberPlate}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500 dark:text-gray-400">Experience</dt>
+                          <dd className="text-sm font-medium text-gray-900 dark:text-white">
+                            {selectedDriver.experience}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Address</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {selectedDriver.address}
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Bus Number Plate</p>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        {selectedDriver.numberPlate}
-                      </p>
-                    </div>
-
-                    {driverLocations[selectedDriver.id] && (
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Current Location</p>
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">
-                          Lat: {driverLocations[selectedDriver.id].latitude.toFixed(6)}, 
-                          Long: {driverLocations[selectedDriver.id].longitude.toFixed(6)}
-                        </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          Last update: {new Date().toLocaleTimeString()}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-                Select a driver to view their details
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Select a driver to view their details
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

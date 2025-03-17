@@ -31,6 +31,7 @@ export default function ForgotPasswordForm() {
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
+      setIsSubmitting(true);
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
@@ -42,13 +43,15 @@ export default function ForgotPasswordForm() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError(result.error || 'Something went wrong');
+        setError(result.error || 'Failed to send reset instructions');
         return;
       }
 
       setIsEmailSent(true);
-    } catch (error) {
+    } catch (err) {
       setError('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
